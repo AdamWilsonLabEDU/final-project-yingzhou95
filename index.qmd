@@ -1,20 +1,25 @@
 ---
-title: "My Final Project Template"
+title: "Identify characteristics that contribute to environmental safety based on people’s perception"
 author: Ying Zhou
-subtitle: Subtitle here if desired
+subtitle: The Case Study of New York City
 date: today
 date-format: long
 ---
 
-# Introduction
+# 1. Introduction
 
-\[\~ 200 words\]
+One goal of creating livable cities is to enhance health and safety. While previous research in spatial analysis and urban planning has focused on correlations between physical environments and crime, typically relying on police-reported crime data from sources like the Crime Open Database (CODE), safety perception is inherently subjective and cannot be fully represented by objective crime statistics alone. Also, urban planning today has gradually shifted its focus from a top-down mechanism to a bottom-up mechanism, so understanding and fostering spaces where residents feel safe is essential. This project explores spatial autocorrelation of the reported crime events and people perceived dangerous places; also, it examines characteristics of urban space that contribute to residents’ perceived insecurity in New York City. 
 
-Clearly stated background and questions / hypotheses / problems being addressed. Sets up the analysis in an interesting and compelling way. Include figures if you like.
+# 2. Materials and methods
 
-# Materials and methods
+## 2.1 Data
 
-\[\~ 200 words\]
+Reported crime events: The Crime Open Database (CODE)
+People’s Perception: Twitter in 2017
+
+## 2.2 Method
+
+In addition to spatial analysis of the open crime data, the research utilizes social media data to acquire people’s perceptions. By adopting Latent Dirichlet Allocation (LDA), a method of topic modeling, the research filtered and summarized posted texts and contents related to the negative descriptions of places or spaces in the city, and then it identified the related characteristics of the environments. The characteristics are investigated by the method of local Moran’s I, which indicates their spatial autocorrelation in some neighborhoods in New York City.
 
 Narrative: Clear narrative description of the data sources and methods. Includes data from at least two sources that were integrated / merged in R.
 
