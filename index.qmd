@@ -52,9 +52,8 @@ nyc_twitterIn2017 <- read.csv(Twitter_path,
 ```
 
 ### Clean the data
-Warning: This step may take more than 3 days because the original twitter data is too big. If you want to do analysis in your computer, please load the cleaned data in the date file.
-```{r}
-# clean data
+Warning: The following steps will take more than 7 days because the original twitter data is too big. If you want to do analysis in your computer, please load the cleaned data in the date file.Here, I just show the steps for datacleaning and sentiment analysis.
+\# clean data
 nyc_twitterIn2017 <- nyc_twitterIn2017 %>%
   select(text, created_at, lon, lat)
 nyc_twitterIn2017$text <- gsub("http\\S+|www\\S+", "", nyc_twitterIn2017$text)
@@ -63,11 +62,11 @@ nyc_twitterIn2017$text <- tolower(nyc_twitterIn2017$text) # convert to lowercase
 nyc_twitterIn2017_clean <- nyc_twitterIn2017 %>%
   filter(textcat(text) == "english") %>% #select English tweets
   mutate(text = wordStem(text, language = "en")) #stemming
-# save the file for analysis
+\# save the file for analysis
 output_path <- file.path("data", "nyc_twitterIn2017_clean.csv")
 write.csv(nyc_twitterIn2017, output_path, row.names = FALSE)
 
-# remove stop words
+\# remove stop words
 registerDoParallel(4)
 getDoParWorkers()
 custom_stopwords <- c(stopwords("en"), "with")
@@ -78,12 +77,11 @@ nyc_twitterIn2017_clean$text <- foreach(text = nyc_twitterIn2017_clean$text,
                                         }
 output_path <- file.path("data", "nyc_twitterIn2017_SWclean.csv")
 write.csv(nyc_twitterIn2017_clean, output_path, row.names = FALSE)
-```
+
 
 ### Sentiment Analysis
 
-```{r}
-# loading sentiment words
+\# loading sentiment words
 positive_path <- file.path("data", "positive-words.txt")
 negative_path <- file.path("data", "negative-words.txt")
 positive = scan(positive_path,
@@ -93,7 +91,7 @@ negative = scan(negative_path,
 escaped_positive <- str_escape(positive)
 escaped_negative <- str_escape(negative)
 
-# sentiment scoring function
+\# sentiment scoring function
 sentiment_score <- function(text, positive, negative) {
   pos_count <- sum(str_detect(text, paste(positive, collapse = "|")))
   neg_count <- sum(str_detect(text, paste(negative, collapse = "|")))
@@ -101,7 +99,7 @@ sentiment_score <- function(text, positive, negative) {
   return(score)
 }
 
-# sentiment score
+\# sentiment score
 nyc_twitterIn2017_score <- nyc_twitterIn2017_clean %>%
   rowwise() %>%
   mutate(sentiment = sentiment_score(text, escaped_positive, escaped_negative)) %>% 
@@ -110,7 +108,7 @@ nyc_twitterIn2017_score <- nyc_twitterIn2017_clean %>%
     sentiment < 0 ~ "negative",
     TRUE ~ "neutral"
   ))
-```
+
 
 
 # Results
@@ -121,27 +119,8 @@ Tables and figures (maps and other graphics) are carefully planned to convey the
 
 Show tables, plots, etc. and describe them.
 
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
-```
-
-```{r}
-data %>% 
-  ggplot(aes(x=x,y=y,col=category))+
-  geom_point()
-```
 
 ### Dygraphs Example
-
-```{r}
-library(dygraphs)
-dygraph(nhtemp, main = "New Haven Temperatures") |> 
-  dyRangeSelector(dateWindow = c("1920-01-01", "1960-01-01")) 
-```
 
 # Conclusions
 
