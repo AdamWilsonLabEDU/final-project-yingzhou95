@@ -1,22 +1,30 @@
 ---
-title: "Identify characteristics that contribute to environmental safety based on people’s perception"
+title: "Identify characteristics that contribute to environmental safety based on people's perception"
 author: Ying Zhou
-subtitle: The Case Study of New York City
+subtitle: The Case of New York City
 date: today
 date-format: long
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    mathjax: true
 ---
 
 # 1. Introduction
 
 One goal of creating livable cities is to enhance health and safety. While previous research in spatial analysis and urban planning has focused on correlations between physical environments and crime, typically relying on police-reported crime data from sources like the Crime Open Database (CODE), safety perception is inherently subjective and cannot be fully represented by objective crime statistics alone. Also, urban planning today has gradually shifted its focus from a top-down mechanism to a bottom-up mechanism, so understanding and fostering spaces where residents feel safe is essential. This project explores spatial autocorrelation of the reported crime events and people perceived dangerous places; also, it examines characteristics of urban space that contribute to residents’ perceived insecurity in New York City.
 
+**Key Words**: Safety, Crime, Urban Space, Livable Cities, Social Media, Spatial Analysis
+
+
 # 2. Materials and methods
 
-In addition to spatial analysis of the open crime data, the research utilizes social media data to acquire people’s perceptions. By adopting Latent Dirichlet Allocation (LDA), a method of topic modeling, the research filtered and summarized posted texts and contents related to the negative descriptions of places or spaces in the city, and then it identified the related characteristics of the environments. The characteristics are investigated by the method of local Moran’s I, which indicates their spatial autocorrelation in some neighborhoods in New York City.
+In addition to spatial analysis of the open crime data, the research utilizes social media data to acquire people's perceptions. By adopting Latent Dirichlet Allocation (LDA), a method of topic modeling, the research filtered and summarized posted texts and contents related to the negative descriptions of places or spaces in the city, and then it identified the related characteristics of the environments. The characteristics are investigated by the method of local Moran's I, which indicates their spatial autocorrelation in some neighborhoods in New York City.
 
 ## 2.1 Load Packages
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(textcat)
 library(dplyr)
 library(stringr)
@@ -31,38 +39,43 @@ library(foreach)
 library(doParallel)
 ```
 
-## 2.1 Data
+## 2.2 Data
 
-Reported crime events: The Crime Open Database (CODE)
+### Load and Download Data
 
-```{r}
-library(crimedata)
-# get crime data in NYC in 2017
+**Reported crime events: The Crime Open Database (CODE)**
+
+```{r, message=FALSE, warning=FALSE}
+# load NYC twitter data in 2017
 crime_nyc_2017 <- get_crime_data(year = 2017, cities = "New York",
                                  type = "core", output = "sf")
+
 ```
 
-People’s Perception: Twitter in 2017
+**People's Perception: Twitter in 2017**
 
-```{r}
+Because the original data is too big, it takes more than 7 days to load the data, clean the data, and make sentiment analysis. Therefore, the data I loaded in here is data after cleaning and making sentiment analysis.
+
+```{r, message=FALSE, warning=FALSE}
 # load NYC twitter data in 2017
-Twitter_path <- file.path("data", "nyc_twitterIn2017.csv")
-nyc_twitterIn2017 <- read.csv(Twitter_path,
+Twitter_path <- file.path("data",
+                          "nyc_twitterIn2017_SAscores.csv")
+nyc_negTweet <- read.csv(Twitter_path,
                                 stringsAsFactors = FALSE)
 ```
 
-### Clean the data
-Warning: This step may take more than 3 days because the original twitter data is too big. If you want to do analysis in your computer, please load the cleaned data in the date file.
-```{r}
+Warning : The steps of "Data Cleaning" and "Sentiment Analysis" may take more than 7 days because the original twitter data is too big. \### Data Cleaning
+
+```{r, eval=FALSE}
 # clean data
 nyc_twitterIn2017 <- nyc_twitterIn2017 %>%
   select(text, created_at, lon, lat)
 nyc_twitterIn2017$text <- gsub("http\\S+|www\\S+", "", nyc_twitterIn2017$text)
 nyc_twitterIn2017$text <- gsub("@\\w+", "", nyc_twitterIn2017$text)
-nyc_twitterIn2017$text <- tolower(nyc_twitterIn2017$text) # convert to lowercase text
+nyc_twitterIn2017$text <- tolower(nyc_twitterIn2017$text) #convert to lowercase text
 nyc_twitterIn2017_clean <- nyc_twitterIn2017 %>%
-  filter(textcat(text) == "english") %>% #select English tweets
-  mutate(text = wordStem(text, language = "en")) #stemming
+  filter(textcat(text) == "english") %>% # select English tweets
+  mutate(text = wordStem(text, language = "en")) # stemming
 # save the file for analysis
 output_path <- file.path("data", "nyc_twitterIn2017_clean.csv")
 write.csv(nyc_twitterIn2017, output_path, row.names = FALSE)
@@ -76,13 +89,18 @@ nyc_twitterIn2017_clean$text <- foreach(text = nyc_twitterIn2017_clean$text,
                                         .packages = "tm") %dopar% {
                                           removeWords(text, custom_stopwords)
                                         }
-output_path <- file.path("data", "nyc_twitterIn2017_SWclean.csv")
-write.csv(nyc_twitterIn2017_clean, output_path, row.names = FALSE)
 ```
 
-### Sentiment Analysis
 
-```{r}
+# 3. Result
+
+## 3.1 Sentiment Analysis
+
+Sentiment analysis aims at giving each tweet an emotional analysis. The most simple way is to count positive words and negative words. Hu & Liu (2006) created several studies for pinion Mining, Sentiment Analysis, and Opinion Spam Detection. They also provide classifications for positive and negative words. These words are applicable in twitter data analysis because they considered about the conditions of regular spelling errors. Relative research papers and data can be download through this website: https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html
+
+### Loading sentiment words
+
+```{r, eval=FALSE}
 # loading sentiment words
 positive_path <- file.path("data", "positive-words.txt")
 negative_path <- file.path("data", "negative-words.txt")
@@ -93,6 +111,11 @@ negative = scan(negative_path,
 escaped_positive <- str_escape(positive)
 escaped_negative <- str_escape(negative)
 
+```
+
+### Creating sentiment scoring function and sentiment scores
+
+```{r, eval=FALSE}
 # sentiment scoring function
 sentiment_score <- function(text, positive, negative) {
   pos_count <- sum(str_detect(text, paste(positive, collapse = "|")))
@@ -104,51 +127,257 @@ sentiment_score <- function(text, positive, negative) {
 # sentiment score
 nyc_twitterIn2017_score <- nyc_twitterIn2017_clean %>%
   rowwise() %>%
-  mutate(sentiment = sentiment_score(text, escaped_positive, escaped_negative)) %>% 
-  mutate(sentiment_label = case_when(                     
+  mutate(sentiment = sentiment_score(text, escaped_positive, escaped_negative)) %>%
+  mutate(sentiment_label = case_when(
     sentiment > 0 ~ "positive",
     sentiment < 0 ~ "negative",
     TRUE ~ "neutral"
   ))
 ```
 
+### Finding negative tweets which also related to urban space
 
-# Results
+Urban space key words here include words related to space , e.g. urban, space, park, neighborhood, the key words also include the names of neighborhoods in New York City.
 
-\[\~200 words\]
+```{r, eval=FALSE}
+UrbanSpace_KeyWords_Path <- file.path("data", "UrbanSpace_KeyWords.txt")
+UrbanSpace_keywords <- scan(UrbanSpace_KeyWords_Path, what = "character", comment.char = ";")
 
-Tables and figures (maps and other graphics) are carefully planned to convey the results of your analysis. Intense exploration and evidence of many trials and failures. The author looked at the data in many different ways before coming to the final presentation of the data.
+nyc_negTweet <- nyc_twitterIn2017_score %>%
+  filter(str_detect(text, paste(UrbanSpace_keywords, collapse = "|"))) %>%
+  filter(sentiment_label == "negative")
 
-Show tables, plots, etc. and describe them.
-
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
+output_path <- file.path("data", "nyc_twitterIn2017_SAscores.csv")
+write.csv(nyc_negTweet, output_path, row.names = FALSE)
 ```
 
-```{r}
-data %>% 
-  ggplot(aes(x=x,y=y,col=category))+
-  geom_point()
+## 3.2 Spatial Autocorrelation Analysis
+
+Spatial autocorrelation is a spatial analysis used to test the correlation of a variable with itself within a specific set of features. This project adopted local Moran's I as a method to test whether the reported crime events and negative tweets are clustered in certain neighborhoods or not.
+
+### Neighborhoods information
+Get data of NYC's neighborhoods on the website of NYC OpenData
+
+```{r, message=FALSE, warning=FALSE}
+
+NY_neigh <- st_read("data/nynta.shp")
+
 ```
 
-### Dygraphs Example
+Transform the negative tweets into sf
 
-```{r}
-library(dygraphs)
-dygraph(nhtemp, main = "New Haven Temperatures") |> 
-  dyRangeSelector(dateWindow = c("1920-01-01", "1960-01-01")) 
+```{r, message=FALSE, warning=FALSE}
+
+nyc_negTweet_sf <- st_as_sf(nyc_negTweet,
+                            coords = c("lon", "lat"),
+                            crs = 4326)
+
 ```
 
-# Conclusions
+### Crime counts & Negative Tweets counts
 
-\[\~200 words\]
+Spatially joined the locations of reported crime events and negative tweets with neighborhoods, and count the numbers of them in each neighborhood.
 
-Clear summary adequately describing the results and putting them in context. Discussion of further questions and ways to continue investigation.
+```{r, message=FALSE, warning=FALSE}
 
-# References
+crime_nyc_2017 <- st_transform(crime_nyc_2017, st_crs(NY_neigh))
+crime_count <- st_join(crime_nyc_2017, NY_neigh) %>%
+  st_drop_geometry() %>%
+  count(NTACode)
 
-All sources are cited in a consistent manner
+nyc_negTweet_sf <- st_transform(nyc_negTweet_sf, st_crs(NY_neigh))
+NegTweet_count <- st_join(nyc_negTweet_sf, NY_neigh) %>%
+  st_drop_geometry() %>%
+  count(NTACode)
+
+# Change the column names, otherwise there will be issues when doing left_join
+crime_count <- crime_count %>%
+  rename(crime_count = n)
+NegTweet_count <- NegTweet_count %>%
+  rename(NegTweet_count = n)
+
+# Left_join all the information
+NY_neigh_info <- NY_neigh %>%
+  left_join(crime_count, by = "NTACode") %>%
+  mutate(crime_count = ifelse(is.na(crime_count), 0, crime_count)) %>%
+  left_join(NegTweet_count, by = "NTACode") %>%
+  mutate(NegTweet_count = ifelse(is.na(NegTweet_count), 0, NegTweet_count))
+
+```
+
+### Local Moral's I Result
+
+```{r, message=FALSE, warning=FALSE}
+
+library(spdep)
+
+# building neighbor correlation matrix
+nb <- poly2nb(NY_neigh_info, queen = TRUE)
+lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+
+# local Moran's I for crime number & negative tweets count
+crime_lm <- localmoran(NY_neigh_info$crime_count, lw, zero.policy = TRUE)
+NY_neigh_info <- NY_neigh_info %>%
+  mutate(crime_I = crime_lm[, "Ii"],
+         crime_p = crime_lm[, "Pr(z != E(Ii))"])
+
+neg_tweet_lm <- localmoran(NY_neigh_info$NegTweet_count, lw, zero.policy = TRUE)
+NY_neigh_info <- NY_neigh_info %>%
+  mutate(neg_tweet_I = neg_tweet_lm[, "Ii"],
+         neg_tweet_p = neg_tweet_lm[, "Pr(z != E(Ii))"])
+
+```
+
+The neighborhoods marked green and yellow are neighborhoods clustered with characteristics of high crime events or high negative tweets. Inversely, the neighborhoods marked blue and purple are neighborhoods clustered with characteristics of low crime events or low negative tweets. If the value Moran's I value is zero, the neighborhoods are not statistically clustered.
+
+For the result of reported crime events, there are three high-crime events clustered regions. The first region is in the Manhattan borough which has the highest Moran's I value, including neighborhoods of Hudson Yards-Chelsea-Flatiron-Union Square, West Village, Clinton, East Village, and Gramercy. The second region is in the Bronx borough, including neighborhoods of West Concourse, Mott Haven-Port Morris, Hunts Point, and East Harlem North. The third region is in the Brooklyn borough, including the neighborhoods of Ocean Hill, Crown Heights North, and Stuyvesant Heights.
+
+For the result of negative tweets, only the neighborhood of Midtown-Midtown South shows a high Moran's I value, other places are clustered with low values. When comparing Moran's I value of negative tweets to the value of crime events, the Midtown-Midtown South has opposite results, which indicates differences between people's perceptions for urban space and reported crime events.
+
+
+### Visualization
+
+```{r, message=FALSE, warning=FALSE}
+
+library(leaflet)
+library(viridis)
+
+NY_neigh_info <- st_transform(NY_neigh_info, crs = 4326)
+
+MoranI_leaflet <- leaflet(NY_neigh_info) %>%
+  addProviderTiles("OpenStreetMap.Mapnik") %>%
+  addPolygons(
+    fillColor = ~viridis::viridis(100)[as.numeric(cut(crime_I, breaks = 100))],
+    color = "white",
+    weight = 1,
+    fillOpacity = 1,
+    popup = ~paste("Neighborhood: ", NTAName, "<br>Crime Count Moran's I: ", crime_I),
+    label = ~NTAName,
+    group = "Crime Count Moran I"
+  ) %>%
+  addPolygons(
+    fillColor = ~viridis::viridis(100)[as.numeric(cut(neg_tweet_I, breaks = 100))],
+    color = "white",
+    weight = 1,
+    fillOpacity = 1,
+    popup = ~paste("Neighborhood: ", NTAName, "<br>Negative Tweet Moran's I: ", neg_tweet_I),
+    label = ~NTAName,
+    group = "Negative Tweet Moran I"
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    pal = colorNumeric(palette = "viridis", domain = NY_neigh_info$crime_I),
+    values = ~crime_I,
+    title = "Crime Count Moran's I",
+    group = "Crime Count Moran I"
+  ) %>%
+  addLegend(
+    position = "bottomleft",
+    pal = colorNumeric(palette = "viridis", domain = NY_neigh_info$neg_tweet_I),
+    values = ~neg_tweet_I,
+    title = "Negative Tweet Moran's I",
+    group = "Negative Tweet Moran I"
+  ) %>%
+  addLayersControl(
+    overlayGroups = c("Crime Count Moran I", "Negative Tweet Moran I"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+MoranI_leaflet
+
+```
+
+## 3.3 The Characteristics of People's Perception
+
+To find and summarize the the characteristics of people's negative perception, this project adopt Latent Dirichlet Allocation (LDA) to generate 15 different topics based on the tweets.
+
+### Create a topic model with LDA()
+
+```{r, message=FALSE, warning=FALSE}
+
+library(topicmodels)
+
+corpus <- Corpus(VectorSource(replace_emoji(nyc_negTweet$text,
+                                            replacement = "")))
+minimumFrequency <- 5
+DTM <- DocumentTermMatrix(corpus,
+                          control = list(bounds = list(global = c(minimumFrequency, Inf))))
+
+
+```
+
+
+### Plotting words probabilities
+```{r, message=FALSE, warning=FALSE}
+
+# clean the rows with no words
+row_terms <- apply(DTM, 1, sum)
+DTM_clean <- DTM[row_terms > 0, ]
+
+# Latent Dirichlet Allocation (LDA) with 15 topics
+DTM_clean_LDA <- LDA(DTM_clean, 15) %>%
+  terms(20)
+DTM_clean_LDA
+
+```
+
+```{r, eval=FALSE}
+
+# clean the rows with no words
+row_terms <- apply(DTM, 1, sum)
+DTM_clean <- DTM[row_terms > 0, ]
+
+# Latent Dirichlet Allocation (LDA) with 15 topics
+DTM_clean_LDA <- LDA(DTM_clean, 15) %>%
+  terms(20)
+DTM_clean_LDA
+
+# Plot LDA result
+library(tidytext)
+NYCtweet_lda_gibbs <- LDA(DTM_clean,
+                       k = 15,
+                       method = "Gibbs",
+                       control = list(seed = 33)) %>%
+  tidytext::tidy(matrix = "beta")
+
+library(tidyverse)
+NYCtweet_word_prob <- NYCtweet_lda_gibbs %>%
+  group_by(topic) %>%
+  top_n(20, beta) %>%
+  ungroup() %>%
+  mutate(term_n = fct_reorder(term, beta))
+
+ggplot(NYCtweet_word_prob,
+       aes(term_n,
+           beta,
+           fill = as.factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(~ topic, scales = "free", ncol = 3) +
+  labs(title = "Top Terms in Each Topic",
+                                           x = "Probalities",
+                                           y = "Term")
+
+```
+![Results of words probabilities of 15 topics](data/LDA_Result.png)
+The 15 topics created by topic modeling based on negative tweets (which contain keywords related to urban space) have few words related to physical environments, including words of square, tree, and cars. Words that relate to people and appearances of people show up a lot and have significantly higher probabilities than others, for example, grinning, smile, eye, and face. Also, some color-related words come up under several topics, for example, red, white, and black. 
+
+
+# 4. Conclusions
+
+Both reported crime events and people's negative perceptions clustered in the borough of Manhattan, however, the clustered neighborhoods are different, and some even have opposite results. One reason is that this project's sentiment analysis only classifies words as negative and positive. Also, people's negative perceptions may come from different feelings, for example, feeling dangerous, angry, or sad. Therefore, future study requires more detailed classification and accurate sentiment algorithms.
+
+The result of topic modeling represents the most topics of negative tweets related to people and people's appearances. Few topics describe the urban space, relative words consist of square, tree, and car. The word "car" has a high probability in one topic, which indicates people's negative perceptions of traffic congestion or traffic safety. LDA as a method for topic modeling has many shortages, for instance, it requires people to find suitable topic numbers. In the future, I want to try the method of Bert for more reliable and accurate topic modeling. 
+
+
+# 5. References
+
+Chen, Y., Song, Y., & Li, C. (2020). Where do people tweet? The relationship of the built environment to tweeting in Chicago. Sustainable Cities and Society, 52, 101817.
+Croitoru, A., Wayant, N., Crooks, A., Radzikowski, J., & Stefanidis, A. (2015). Linking cyber and physical spaces through community detection and clustering in social media feeds. Computers, Environment and Urban Systems, 53, 47-64.
+Kitaoka, Saki, and Takashi Hasuike. "Where is safe: Analyzing the relationship between the area and emotion using Twitter data." 2017 IEEE Symposium Series on Computational Intelligence (SSCI). IEEE, 2017.
+Liu, B., & Hu, M. (2006). Opinion Mining, Sentiment Analysis, and Opinion Spam Detection. Retrieved from https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html
+Modi, S., & Dommeti, S. (2016, https://jtr13.github.io/cc21/twitter-sentiment-analysis-in-r.html). Chapter 33 Twitter sentiment analysis in R. Retrieved from EDAV Resources.
+Park, Y. J. (2023). Twitter LDA Topic Modeling. Retrieved from RPubs by RStudio: https://rpubs.com/subwaymatch/twitter-topic-modeling-with-LDAVis-v3
+Vanderstay, M. (2023). LDA With R Makes Twitter Data Insights Easy. Retrieved from MARK VANDERSTAY: https://markvanderstay.com/posts/using-r-for-twitter-analysis-lda/#create-a-topic-model-with-lda
+
+
