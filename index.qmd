@@ -398,7 +398,7 @@ ggplot(NYCtweet_word_prob,
 The 15 topics created by topic modeling based on negative tweets (which contain keywords related to urban space) have few words related to physical environments, including words of square, tree, and cars. Words that relate to people and appearances of people show up a lot and have significantly higher probabilities than others, for example, grinning, smile, eye, and face. Also, some color-related words come up under several topics, for example, red, white, and black. 
 
 
-# 4. Conclusions
+# 4. Conclusions 
 
 Both reported crime events and people's negative perceptions clustered in the borough of Manhattan, however, the clustered neighborhoods are different, and some even have opposite results. One reason is that this project's sentiment analysis only classifies words as negative and positive. Also, people's negative perceptions may come from different feelings, for example, feeling dangerous, angry, or sad. Therefore, future study requires more detailed classification and accurate sentiment algorithms.
 
