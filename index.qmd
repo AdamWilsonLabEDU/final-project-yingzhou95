@@ -64,23 +64,35 @@ nyc_negTweet <- read.csv(Twitter_path,
                                 stringsAsFactors = FALSE)
 ```
 
+<<<<<<< HEAD
 Warning : The steps of "Data Cleaning" and "Sentiment Analysis" may take more than 7 days because the original twitter data is too big. \### Data Cleaning
 
 ```{r, eval=FALSE}
 # clean data
+=======
+### Clean the data
+Warning: The following steps will take more than 7 days because the original twitter data is too big. If you want to do analysis in your computer, please load the cleaned data in the date file.Here, I just show the steps for datacleaning and sentiment analysis.
+\# clean data
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 nyc_twitterIn2017 <- nyc_twitterIn2017 %>%
   select(text, created_at, lon, lat)
 nyc_twitterIn2017$text <- gsub("http\\S+|www\\S+", "", nyc_twitterIn2017$text)
 nyc_twitterIn2017$text <- gsub("@\\w+", "", nyc_twitterIn2017$text)
 nyc_twitterIn2017$text <- tolower(nyc_twitterIn2017$text) #convert to lowercase text
 nyc_twitterIn2017_clean <- nyc_twitterIn2017 %>%
+<<<<<<< HEAD
   filter(textcat(text) == "english") %>% # select English tweets
   mutate(text = wordStem(text, language = "en")) # stemming
 # save the file for analysis
+=======
+  filter(textcat(text) == "english") %>% #select English tweets
+  mutate(text = wordStem(text, language = "en")) #stemming
+\# save the file for analysis
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 output_path <- file.path("data", "nyc_twitterIn2017_clean.csv")
 write.csv(nyc_twitterIn2017, output_path, row.names = FALSE)
 
-# remove stop words
+\# remove stop words
 registerDoParallel(4)
 getDoParWorkers()
 custom_stopwords <- c(stopwords("en"), "with")
@@ -89,9 +101,16 @@ nyc_twitterIn2017_clean$text <- foreach(text = nyc_twitterIn2017_clean$text,
                                         .packages = "tm") %dopar% {
                                           removeWords(text, custom_stopwords)
                                         }
+<<<<<<< HEAD
 ```
+=======
+output_path <- file.path("data", "nyc_twitterIn2017_SWclean.csv")
+write.csv(nyc_twitterIn2017_clean, output_path, row.names = FALSE)
+
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 
 
+<<<<<<< HEAD
 # 3. Result
 
 ## 3.1 Sentiment Analysis
@@ -102,6 +121,9 @@ Sentiment analysis aims at giving each tweet an emotional analysis. The most sim
 
 ```{r, eval=FALSE}
 # loading sentiment words
+=======
+\# loading sentiment words
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 positive_path <- file.path("data", "positive-words.txt")
 negative_path <- file.path("data", "negative-words.txt")
 positive = scan(positive_path,
@@ -111,12 +133,16 @@ negative = scan(negative_path,
 escaped_positive <- str_escape(positive)
 escaped_negative <- str_escape(negative)
 
+<<<<<<< HEAD
 ```
 
 ### Creating sentiment scoring function and sentiment scores
 
 ```{r, eval=FALSE}
 # sentiment scoring function
+=======
+\# sentiment scoring function
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 sentiment_score <- function(text, positive, negative) {
   pos_count <- sum(str_detect(text, paste(positive, collapse = "|")))
   neg_count <- sum(str_detect(text, paste(negative, collapse = "|")))
@@ -124,7 +150,7 @@ sentiment_score <- function(text, positive, negative) {
   return(score)
 }
 
-# sentiment score
+\# sentiment score
 nyc_twitterIn2017_score <- nyc_twitterIn2017_clean %>%
   rowwise() %>%
   mutate(sentiment = sentiment_score(text, escaped_positive, escaped_negative)) %>%
@@ -133,7 +159,7 @@ nyc_twitterIn2017_score <- nyc_twitterIn2017_clean %>%
     sentiment < 0 ~ "negative",
     TRUE ~ "neutral"
   ))
-```
+
 
 ### Finding negative tweets which also related to urban space
 
@@ -147,6 +173,7 @@ nyc_negTweet <- nyc_twitterIn2017_score %>%
   filter(str_detect(text, paste(UrbanSpace_keywords, collapse = "|"))) %>%
   filter(sentiment_label == "negative")
 
+<<<<<<< HEAD
 output_path <- file.path("data", "nyc_twitterIn2017_SAscores.csv")
 write.csv(nyc_negTweet, output_path, row.names = FALSE)
 ```
@@ -163,6 +190,10 @@ Get data of NYC's neighborhoods on the website of NYC OpenData
 NY_neigh <- st_read("data/nynta.shp")
 
 ```
+=======
+Show tables, plots, etc. and describe them.
+
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 
 Transform the negative tweets into sf
 
@@ -172,9 +203,13 @@ nyc_negTweet_sf <- st_as_sf(nyc_negTweet,
                             coords = c("lon", "lat"),
                             crs = 4326)
 
+<<<<<<< HEAD
 ```
 
 ### Crime counts & Negative Tweets counts
+=======
+# Conclusions
+>>>>>>> 0e09dd568c70e8fe75c9e87891ab3f06f0e5c706
 
 Spatially joined the locations of reported crime events and negative tweets with neighborhoods, and count the numbers of them in each neighborhood.
 
